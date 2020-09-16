@@ -14,7 +14,7 @@ int main()
 
     cvtColor(srcSQ, srcHSV, COLOR_BGR2HSV);
     cvtColor(srcSQ, srcGRAY, COLOR_BGR2GRAY);
-    threshold(srcSQ,srcBIN,100,255,THRESH_BINARY);
+    threshold(srcGRAY,srcBIN,100,255,THRESH_BINARY);
 
     rectangle(srcDRW, Point(200,130), Point(275,230), Scalar(0,255,0), 3);
     rectangle(srcDRW, Point(100,310), Point(160,380), Scalar(0,0,255), 3);
