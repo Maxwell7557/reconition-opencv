@@ -6,10 +6,10 @@ using namespace std;
 
 void draw_trapeze(Mat frame, Point2f* src_vertices)
 {
-    line(frame, src_vertices[0], src_vertices[1], Scalar(0, 255, 0), 2);
-    line(frame, src_vertices[1], src_vertices[2], Scalar(0, 255, 0), 2);
-    line(frame, src_vertices[2], src_vertices[3], Scalar(0, 255, 0), 2);
-    line(frame, src_vertices[3], src_vertices[0], Scalar(0, 255, 0), 2);
+    line(frame, src_vertices[0], src_vertices[1], Scalar(0, 255, 0), 1);
+    line(frame, src_vertices[1], src_vertices[2], Scalar(0, 255, 0), 1);
+    line(frame, src_vertices[2], src_vertices[3], Scalar(0, 255, 0), 1);
+    line(frame, src_vertices[3], src_vertices[0], Scalar(0, 255, 0), 1);
 }
 
 void show_fps_time(Mat frame, VideoCapture video)
@@ -17,9 +17,9 @@ void show_fps_time(Mat frame, VideoCapture video)
     char fps[20];
     char time[20];
     sprintf(fps, "FPS: %.0f", video.get(CAP_PROP_FPS));
-    putText(frame, fps, Point(20, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
-    sprintf(time, "TIME: %.0f ms", video.get(CAP_PROP_POS_MSEC));
-    putText(frame, time, Point(20, 60), FONT_HERSHEY_SIMPLEX, 1, Scalar(255, 255, 255), 2);
+    putText(frame, fps, Point(20, 30), FONT_HERSHEY_PLAIN, 1, Scalar(255, 255, 255), 1);
+    sprintf(time, "Time (ms): %.0f", video.get(CAP_PROP_POS_MSEC));
+    putText(frame, time, Point(20, 60), FONT_HERSHEY_PLAIN, 1, Scalar(255, 255, 255), 1);
 }
 
 vector<Point2f> recognition_of_marking(Mat frame)
@@ -55,22 +55,24 @@ void draw_marks(Mat frame_with_marking, Mat tmp_inv, vector<Point2f> points)
         perspectiveTransform(points, points, tmp_inv);
         for(int i = 0; i < points.size(); i++)
         {
-            line(frame_with_marking,Point(points[i].x -2, points[i].y -2), Point(points[i].x +2, points[i].y +2), Scalar(200, 70, 20), 2);
-            line(frame_with_marking,Point(points[i].x +2, points[i].y -2), Point(points[i].x -2, points[i].y +2), Scalar(200, 70, 20), 2);
+            line(frame_with_marking,Point(points[i].x -2, points[i].y -2), Point(points[i].x +2, points[i].y +2), Scalar(0, 0, 200), 2);
+            line(frame_with_marking,Point(points[i].x +2, points[i].y -2), Point(points[i].x -2, points[i].y +2), Scalar(0, 0, 200), 2);
         }
     }
 }
 
-Mat get_gray_image(Mat transformed, Mat &bin)
+void get_mask(Mat &bin)
 {
-    cvtColor(transformed, bin, COLOR_BGR2GRAY);
-    blur(bin, bin, Size(9, 9));
-    threshold(bin, bin, 160, 255, THRESH_BINARY);
+    Mat hsv, white, yellow;
+    cvtColor(bin, hsv, COLOR_BGR2HSV);
+    inRange(hsv, Scalar(0, 0, 230), Scalar(255, 255, 255), white);
+    inRange(hsv, Scalar(20, 100, 100), Scalar(30, 255, 255), yellow);
+    bitwise_or(white, yellow, bin);
 }
 
 int main()
 {
-    VideoCapture video("highway.mp4");
+    VideoCapture video("highway-1.mp4");
     if(!video.isOpened())
     {
         cout << "Error with openning file" << endl;
@@ -81,10 +83,10 @@ int main()
     int bottom = 590;
     int height = 170;
 
-    namedWindow("Original video");
-    createTrackbar("Top", "Original video", &top, 600);
-    createTrackbar("Bottom", "Original video", &bottom, 600);
-    createTrackbar("Height", "Original video", &height, 700);
+    namedWindow("Source");
+    createTrackbar("Top", "Source", &top, 600);
+    createTrackbar("Bottom", "Source", &bottom, 600);
+    createTrackbar("Height", "Source", &height, 700);
 
     while(1)
     {
@@ -113,9 +115,10 @@ int main()
         warpPerspective(frame, transformed, tmp, transformed.size());
         draw_trapeze(frame,src_vertices);
 
-        Mat frame_binary, tmp_inv;
+        Mat tmp_inv;
+        Mat frame_binary = transformed.clone();
         vector<Point2f> points;
-        get_gray_image(transformed, frame_binary);
+        get_mask(frame_binary);
         points = recognition_of_marking(frame_binary);
 
         tmp_inv = getPerspectiveTransform(trn_vertices, src_vertices);
@@ -124,7 +127,7 @@ int main()
         show_fps_time(frame, video);
         show_fps_time(frame_with_marking, video);
 
-        imshow("Original video", frame);
+        imshow("Source", frame);
         imshow("BirdEye", transformed);
         imshow("Binary Image", frame_binary);
         imshow("Road marking recognition", frame_with_marking);
